@@ -8,12 +8,12 @@ remappings = [
 fs_permissions = [{ access = "read", path = "./broadcast" }]
 solc = "0.8.19"
 
-[etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}" }
-sepolia = { key = "${ETHERSCAN_API_KEY}" }
+# [etherscan]
+# mainnet = { key = "${ETHERSCAN_API_KEY}" }
+# sepolia = { key = "${ETHERSCAN_API_KEY}" }
 
-[rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
-zksync-local = "http://127.0.0.1:8011"
+# [rpc_endpoints]
+# sepolia = "${SEPOLIA_RPC_URL}"
+# zksync-local = "http://127.0.0.1:8011"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

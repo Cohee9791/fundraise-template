@@ -1,91 +1,46 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-import {MockV3Aggregator} from "../test/mock/MockV3Aggregator.sol";
-import {Script, console2} from "forge-std/Script.sol";
-
-abstract contract CodeConstants {
-    uint8 public constant DECIMALS = 8;
-    int256 public constant INITIAL_PRICE = 2000e8;
-
-    /*//////////////////////////////////////////////////////////////
-                               CHAIN IDS
-    //////////////////////////////////////////////////////////////*/
-    uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
-    uint256 public constant ZKSYNC_SEPOLIA_CHAIN_ID = 300;
-    uint256 public constant LOCAL_CHAIN_ID = 31337;
-}
-
-contract HelperConfig is CodeConstants, Script {
-    /*//////////////////////////////////////////////////////////////
-                                 ERRORS
-    //////////////////////////////////////////////////////////////*/
-    error HelperConfig__InvalidChainId();
-
-    /*//////////////////////////////////////////////////////////////
-                                 TYPES
-    //////////////////////////////////////////////////////////////*/
+//SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
+import {Script} from "forge-std/Script.sol";
+import {MockV3Aggregator} from "../test/Mocks/MockV3Aggregator.t.sol";
+contract HelperConfig is Script {
+    //？struct节省gas，所以不用mapping
     struct NetworkConfig {
         address priceFeed;
     }
+    NetworkConfig public activeNetworkConfig;
+    MockV3Aggregator mockPriceFeed;
+    uint8 public constant decimal = 8;
+    int256 public constant Intial_Price = 2000e8;
 
-    /*//////////////////////////////////////////////////////////////
-                            STATE VARIABLES
-    //////////////////////////////////////////////////////////////*/
-    // Local network state variables
-    NetworkConfig public localNetworkConfig;
-    mapping(uint256 chainId => NetworkConfig) public networkConfigs;
-
-    /*//////////////////////////////////////////////////////////////
-                               FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
     constructor() {
-        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaEthConfig();
-        networkConfigs[ZKSYNC_SEPOLIA_CHAIN_ID] = getZkSyncSepoliaConfig();
-        // Note: We skip doing the local config
-    }
-
-    function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
-        if (networkConfigs[chainId].priceFeed != address(0)) {
-            return networkConfigs[chainId];
-        } else if (chainId == LOCAL_CHAIN_ID) {
-            return getOrCreateAnvilEthConfig();
+        if (block.chainid == 11155111) {
+            activeNetworkConfig = getSepoliaEthConfig();
         } else {
-            revert HelperConfig__InvalidChainId();
+            activeNetworkConfig = getAnvilEthConfig();
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
-                                CONFIGS
-    //////////////////////////////////////////////////////////////*/
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
-        return NetworkConfig({
-            priceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306 // ETH / USD
+        NetworkConfig memory sepoliaConfig = NetworkConfig({
+            priceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306
         });
+        return sepoliaConfig;
     }
 
-    function getZkSyncSepoliaConfig() public pure returns (NetworkConfig memory) {
-        return NetworkConfig({
-            priceFeed: 0xfEefF7c3fB57d18C5C6Cdd71e45D2D0b4F9377bF // ETH / USD
-        });
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              LOCAL CONFIG
-    //////////////////////////////////////////////////////////////*/
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
-        // Check to see if we set an active network config
-        if (localNetworkConfig.priceFeed != address(0)) {
-            return localNetworkConfig;
+    function getAnvilEthConfig() public returns (NetworkConfig memory) {
+        //避免重造合约
+        if (activeNetworkConfig.priceFeed != address(0)) {
+            return activeNetworkConfig;
         }
 
-        console2.log(unicode"⚠️ You have deployed a mock contract!");
-        console2.log("Make sure this was intentional");
+        //创建合约并返回合约地址
         vm.startBroadcast();
-        MockV3Aggregator mockPriceFeed = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
+        mockPriceFeed = new MockV3Aggregator(decimal, Intial_Price);
         vm.stopBroadcast();
 
-        localNetworkConfig = NetworkConfig({priceFeed: address(mockPriceFeed)});
-        return localNetworkConfig;
+        NetworkConfig memory anvilConfig = NetworkConfig({
+            priceFeed: address(mockPriceFeed)
+        });
+        return anvilConfig;
     }
 }
